@@ -1,0 +1,8 @@
+#List of API Providers
+---
+nchsbox:
+  token: 1A
+namcheap:
+  token: 2B
+cloudflare:
+  token: 3C
