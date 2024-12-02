@@ -1,8 +1,9 @@
-package apiLib
+package userLib
 
 import (
 	"fmt"
 	"os"
+	"bytes"
 	"github.com/goccy/go-yaml"
 )
 
@@ -10,7 +11,8 @@ type provMap map[string]string
 
 type usermgt struct {
 	list map[string]provMap
-	dbg bool
+	Dbg bool
+	userFilnam string
 }
 
 
@@ -24,19 +26,63 @@ func VerifyCmd(cmdStr string) (bool) {
     return false
 }
 
+func ProcCmd(cmdStr string) (error) {
 
-func InitUserList(yamlFil string) (um *usermgt, err error) {
+	switch cmdStr {
+	case "list":
+
+
+	case "add":
+
+
+	case "rm":
+
+
+	case "upd":
+
+	default:
+		return fmt.Errorf("unknown command: %s\n", cmdStr)
+
+	}
+
+	return nil
+}
+
+func InitUserList(yamlFilnam string) (um *usermgt, err error) {
 
 	var users usermgt
-	users.list = make(map[string]provMap)
+	list := make(map[string]provMap)
 
-	ldat, err := os.ReadFile(yamlFil)
+	ldat, err := os.ReadFile(yamlFilnam)
 	if err != nil {return nil, fmt.Errorf("Read List: %v", err)}
 
-	err = yaml.Unmarshal(ldat,users.list)
+	err = yaml.Unmarshal(ldat,&list)
 	if err != nil {return nil, fmt.Errorf("UnMarshal: %v", err)}
 
+	users.list = list
+	users.userFilnam = yamlFilnam
 	return &users, nil
+}
+
+func (ul *usermgt) SaveUserFile() (error) {
+
+	filNam := []byte(ul.userFilnam)
+	idx := bytes.Index(filNam, []byte(".yaml"))
+	if idx < 1 {return fmt.Errorf("save: no yaml extension!")}
+	oldFilnam := append(filNam[:idx], []byte("_old.yaml")...)
+	err := os.Rename(ul.userFilnam, string(oldFilnam))
+	if err != nil {return fmt.Errorf("rename: %v", err)}
+	list:=ul.list
+	out, err := yaml.Marshal(&list)
+	if err != nil {return fmt.Errorf("Marshal: %v", err)}
+
+	out = append([]byte("#user name list (revised)\n---\n"),out...)
+
+	newFilnam := append(filNam[:idx], []byte("_new.yaml")...)
+	err = os.WriteFile(string(newFilnam), out, 0666)
+	if err != nil {return fmt.Errorf("write: %v", err)}
+
+	return nil
 }
 
 func (ul *usermgt) GetAllUsers() (users []string) {
@@ -51,10 +97,6 @@ func (ul *usermgt) GetAllUsers() (users []string) {
 
 	return users
 }
-
-
-
-
 func (ul *usermgt) GetUserToken(unam string) (string, bool){
 
 	user, ok:= ul.list[unam]
