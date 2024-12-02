@@ -1,8 +1,8 @@
-#List of API Providers
+#List of Users
 ---
-nchsbox:
+peter:
   token: 1A
-namcheap:
+joe:
   token: 2B
-cloudflare:
+maria:
   token: 3C
