@@ -80,10 +80,12 @@ func main() {
 	if err != nil {log.Fatalf("error -- InitUserList: %v\n", err)}
 
 	um.Dbg = dbg
-	if dbg {um.PrintList()}
+	if dbg {fmt.Println("before command\n"); um.PrintList();}
 
 	err = um.ProcCmd(cmdStr, userStr)
 	if err != nil {log.Fatalf("error -- ProcCmd: %v\n", err)}
+
+	if dbg {fmt.Println("after command\n"); um.PrintList();}
 
 //	err = um.SaveUserFile()
 //	if err != nil {log.Fatalf("error -- SaveUserFile: %v\n", err)}
