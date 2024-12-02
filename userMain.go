@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	apiLib "goDemo/api/apiLib"
+	ul "goDemo/usermgt/userLib"
 	cliutil "github.com/prr123/utility/utilLib"
 )
 
@@ -15,10 +15,10 @@ import (
 func main() {
 
     numarg := len(os.Args)
-    flags:=[]string{"dbg", "cmd", "app", "val"}
+    flags:=[]string{"dbg", "cmd", "user", "val"}
 
-    useStr := " /cmd={list,get,add,upd,rm} /app=appname </val={yamlfile}> [/dbg]"
-    helpStr := "api vault program"
+    useStr := " /cmd={list,get,add,upd,rm} /user=username </val={yamlfile}> [/dbg]"
+    helpStr := "user management program"
 
     if numarg > len(flags) +1 {
         fmt.Println("too many arguments in cl!")
@@ -49,42 +49,41 @@ func main() {
         cmdStr = cmdval.(string)
     }
 
-    appStr := ""
-   	appval, ok := flagMap["app"]
+    userStr := ""
+   	uval, ok := flagMap["user"]
     if !ok {
-        log.Fatalf("error -- no app flag provided!\n")
+        log.Fatalf("error -- no user flag provided!\n")
     } else {
-        if appval.(string) == "none" {log.Fatalf("error -- no app name provided!\n")}
-        appStr = appval.(string)
+        if uval.(string) == "none" {log.Fatalf("error -- no user name provided!\n")}
+        userStr = uval.(string)
     }
 
-    valStr := "list"
+    valStr := "users"
     val, vok := flagMap["val"]
     if vok {
         if val.(string) == "none" {log.Fatalf("error -- no yaml file provided!\n")}
         valStr = val.(string)
     }
 
-    valFilnam := "yaml/" + valStr + ".yaml"
+    valFilnam := "userData/" + valStr + ".yaml"
 
-	if ok:= apiLib.VerifyCmd(cmdStr); !ok {log.Fatalf("error -- invalid command: %s\n", cmdStr)}
-	if ok:= apiLib.VerifyApp(appStr); !ok {log.Fatalf("error -- invalid app: %s\n", appStr)}
+	if ok:= ul.VerifyCmd(cmdStr); !ok {log.Fatalf("error -- invalid command: %s\n", cmdStr)}
 
     if dbg {
-        fmt.Printf("cmd: %s\n", cmdStr)
-        fmt.Printf("app: %s\n", appStr)
-		fmt.Printf("val: %s\n", valFilnam)
+        fmt.Printf("cmd:  %s\n", cmdStr)
+        fmt.Printf("user: %s\n", userStr)
+		fmt.Printf("val:  %s\n", valFilnam)
 //			fmt.Printf("no valFilnam\n")
     }
 
-	applist, err := apiLib.GetList(valFilnam)
-	if err != nil {log.Fatalf("error -- GetList: %v\n", err)}
+	um, err := ul.InitUserList(valFilnam)
+	if err != nil {log.Fatalf("error -- InitUserList: %v\n", err)}
 
-	if dbg {apiLib.PrintList(applist)}
+	um.Dbg = dbg
+	if dbg {um.PrintList()}
 
-	tokVal, res := apiLib.FindToken("nchsbox", applist)
-
-	fmt.Printf("token: %s, res %t\n", tokVal, res)
+	err = um.SaveUserFile()
+	if err != nil {log.Fatalf("error -- SaveUserFile: %v\n", err)}
 
 	fmt.Println("*** api success ***")
 }
