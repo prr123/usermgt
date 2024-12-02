@@ -26,28 +26,6 @@ func VerifyCmd(cmdStr string) (bool) {
     return false
 }
 
-func ProcCmd(cmdStr string) (error) {
-
-	switch cmdStr {
-	case "list":
-
-
-	case "add":
-
-
-	case "rm":
-
-
-	case "upd":
-
-	default:
-		return fmt.Errorf("unknown command: %s\n", cmdStr)
-
-	}
-
-	return nil
-}
-
 func InitUserList(yamlFilnam string) (um *usermgt, err error) {
 
 	var users usermgt
@@ -81,6 +59,42 @@ func (ul *usermgt) SaveUserFile() (error) {
 	newFilnam := append(filNam[:idx], []byte("_new.yaml")...)
 	err = os.WriteFile(string(newFilnam), out, 0666)
 	if err != nil {return fmt.Errorf("write: %v", err)}
+
+	return nil
+}
+
+func (ul *usermgt) ProcCmd(cmdStr, unam string) (error) {
+
+	switch cmdStr {
+	// list users
+	case "list":
+		if unam == "*" || unam == "all" {
+			users := ul.GetAllUsers()
+//			if err != nil {return fmt.Errorf("list -- GetAllUsers: %v\n",err)}
+			for i, unam := range users {
+				fmt.Printf("--%d: %s\n", i, unam)
+			}
+		}
+
+	case "get":
+		fmt.Printf("dbg -- Cmd: get; User: %s\n", unam)
+		return nil
+	case "add":
+		fmt.Printf("dbg -- Cmd: add; User: %s\n", unam)
+		return nil
+
+	case "rm":
+		fmt.Printf("dbg -- Cmd: rm; User: %s\n", unam)
+		return nil
+
+	case "upd":
+		fmt.Printf("dbg -- Cmd: upd; User: %s\n", unam)
+		return nil
+
+	default:
+		return fmt.Errorf("unknown command: %s\n", cmdStr)
+
+	}
 
 	return nil
 }
