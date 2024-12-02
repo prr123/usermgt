@@ -25,17 +25,18 @@ func VerifyCmd(cmdStr string) (bool) {
 }
 
 
-func (ul *usermgt) InitUserList(yamlFil string) (err error) {
+func InitUserList(yamlFil string) (um *usermgt, err error) {
 
-	ul.list = make(map[string]provMap)
+	var users usermgt
+	users.list = make(map[string]provMap)
 
 	ldat, err := os.ReadFile(yamlFil)
-	if err != nil {return fmt.Errorf("Read List: %v", err)}
+	if err != nil {return nil, fmt.Errorf("Read List: %v", err)}
 
-	err = yaml.Unmarshal(ldat,ul.list)
-	if err != nil {return fmt.Errorf("UnMarshal: %v", err)}
+	err = yaml.Unmarshal(ldat,users.list)
+	if err != nil {return nil, fmt.Errorf("UnMarshal: %v", err)}
 
-	return nil
+	return &users, nil
 }
 
 func (ul *usermgt) GetAllUsers() (users []string) {
