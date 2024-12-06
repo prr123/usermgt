@@ -8,13 +8,17 @@ The package will provide a token for a user with an expirary date and provide pe
 ## Phase 1
 
 Stores the user data in a yaml file. 
+UserMgt.go
 
 ## Phase 2
 
 Store the user data in a kv database.  
+azulUserMgt.go
 
 ## Add Permissions
 
 need a design for permissions.  
 
 ## Create a Web Page for management
+
+
