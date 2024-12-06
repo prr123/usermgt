@@ -2,19 +2,22 @@ package userLibDb
 
 import (
 	"fmt"
-//	"os"
-//	"bytes"
-//	"math/rand"
-//	"time"
-
+	"os"
+	"strings"
 	db "github.com/prr123/pogLib/pogLib"
-//	"github.com/goccy/go-yaml"
+	"github.com/goccy/go-json"
 )
 
 const charset = "abcdefghijklmnopqrstuvwxyz" +
   "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 //type provMap map[string]string
+
+type UserData struct {
+	short string `json:"short,omitempty"`
+	role string `json:"role,omitempty"`
+	token string `json:"token,omitempty"`
+}
 
 type userDbApi struct {
 //	list map[string]provMap
@@ -24,10 +27,21 @@ type userDbApi struct {
 }
 
 
+func EncodeToJson(dat UserData)(jsonData []byte, err error) {
+
+	jsonData, err =json.Marshal(dat)
+	return jsonData, err
+}
+
+func DecodefromJson(jsonData []byte)(dat UserData, err error) {
+	err = json.Unmarshal(jsonData, &dat)
+	return dat, err
+}
+
 
 
 func VerifyCmd(cmdStr string) (bool) {
-    cmdList := []string{"list", "get", "add", "upd", "rm"}
+    cmdList := []string{"list", "get", "getUser", "add", "addUser", "upd", "updUser", "rm"}
     for i:=0; i< len(cmdList); i++ {
         if cmdStr == cmdList[i] {
             return true
@@ -48,6 +62,7 @@ func InitUserDbApi(dbdir string)(api *userDbApi, err error) {
 
 func (api *userDbApi) ProcCmd(cmdStr, userNam, valStr string) (error) {
 
+	dbg := api.Dbg
     switch cmdStr {
 
     // list users
@@ -70,29 +85,67 @@ func (api *userDbApi) ProcCmd(cmdStr, userNam, valStr string) (error) {
         return nil
 
     case "get":
-        fmt.Printf("dbg -- Cmd: get; User: %s\n", userNam)
-        token, err := api.GetUserInfo(userNam)
-        if err != nil {return fmt.Errorf("GetToken: %v", err)}
-        fmt.Printf("dbg -- User: %s Token: %s\n", userNam, token)
+        if dbg {fmt.Printf("dbg -- Cmd: get; User: %s\n", userNam)}
+        valStr, err := api.GetUserStr(userNam)
+        if err != nil {return fmt.Errorf("GetUserStr: %v", err)}
+        if dbg {fmt.Printf("dbg -- User: %s val: %s\n", userNam, valStr)}
+        return nil
+
+    case "getUser":
+        if dbg {fmt.Printf("dbg -- Cmd: getUser; User: %s\n", userNam)}
+        valStr, err := api.GetUserStr(userNam)
+        if err != nil {return fmt.Errorf("GetUserStr: %v", err)}
+        if dbg {fmt.Printf("dbg -- User: %s val: %s\n", userNam, valStr)}
         return nil
 
     case "add":
-        fmt.Printf("dbg -- Cmd: add; User: %s\n", userNam)
-        err := api.AddUser(userNam, valStr)
+        if dbg {fmt.Printf("dbg -- Cmd: add; User: %s\n", userNam)}
+        err := api.AddUserStr(userNam, valStr)
+        if err != nil {return fmt.Errorf("AddUserStr: %v", err)}
+        return nil
+
+    case "addUser":
+        if dbg {fmt.Printf("dbg -- Cmd: addUser; User: %s, val: %s\n", userNam, valStr)}
+		userInfo, err := api.Decode(valStr)
+        if err != nil {return fmt.Errorf("AddUser Decode: %v", err)}
+        err = api.AddUserData(userNam, *userInfo)
         if err != nil {return fmt.Errorf("AddUser: %v", err)}
         return nil
 
     case "rm":
-        fmt.Printf("dbg -- Cmd: rm; User: %s\n", userNam)
+        if dbg {fmt.Printf("dbg -- Cmd: rm; User: %s\n", userNam)}
         err := api.RmUser(userNam)
         if err != nil {return fmt.Errorf("RmUser: %v", err)}
         return nil
 
     case "upd":
-        fmt.Printf("dbg -- Cmd: upd; User: %s\n", userNam)
-        err := api.UpdUser(userNam, valStr)
-        if err != nil {return fmt.Errorf("UpUser: %v", err)}
+        if dbg {fmt.Printf("dbg -- Cmd: upd; User: %s\n", userNam)}
+        err := api.UpdUserStr(userNam, valStr)
+        if err != nil {return fmt.Errorf("UpdUserStr: %v", err)}
         return nil
+
+    case "updUser":
+        if dbg {fmt.Printf("dbg -- Cmd: updUser; User: %s\n", userNam)}
+		userInfo, err := api.Decode(valStr)
+		if err != nil {return fmt.Errorf("UpdUser-Decode: %v", err)}
+        err = api.UpdUserInfo(userNam, userInfo)
+        if err != nil {return fmt.Errorf("UpdUserStr: %v", err)}
+        return nil
+
+    case "clear":
+        if dbg {fmt.Printf("dbg -- Cmd: clear\n")}
+        err := api.ClearDb()
+        if err != nil {return fmt.Errorf("ClearDb: %v", err)}
+
+	case "printDbraw":
+        if dbg {fmt.Printf("dbg -- Cmd: printDbraw\n")}
+        err := api.PrintDb(-1, true)
+        if err != nil {return fmt.Errorf("PrintDbraw: %v", err)}
+
+	case "printDb":
+        if dbg {fmt.Printf("dbg -- Cmd: printDb\n")}
+        err := api.PrintDb(-1, false)
+        if err != nil {return fmt.Errorf("PrintDb: %v", err)}
 
     default:
         return fmt.Errorf("unknown command: %s\n", cmdStr)
@@ -130,29 +183,80 @@ func (api *userDbApi) ListAllUsers() (UserList []string, err error) {
 }
 
 
-func (api *userDbApi) GetUserInfo(userNam string) (string, error){
+func (api *userDbApi) GetUserStr(userNam string) (string, error){
 
     db := api.pogdb
     token, err := db.Read(userNam)
     if err != nil {return "", fmt.Errorf("GetToken: %v", err)}
-
     return string(token), nil
 }
 
-func (api *userDbApi) UpdUser(userNam, valStr string) (error){
+func (api *userDbApi) GetUserData(userNam string) ([]byte, error){
+    db := api.pogdb
+    token, err := db.Read(userNam)
+    if err != nil {return nil, fmt.Errorf("GetToken: %v", err)}
+    return token, nil
+}
+
+func (api *userDbApi) GetUserInfo(userNam string) (userInfo *UserData,err error){
+    db := api.pogdb
+    token, err := db.Read(userNam)
+    if err != nil {return nil, fmt.Errorf("GetToken: %v", err)}
+
+	err = json.Unmarshal(token, userInfo)
+	if err != nil {return nil, fmt.Errorf("Unmarshal: %v", err)}
+
+    return userInfo, nil
+}
+
+func (api *userDbApi) UpdUserStr(userNam, valStr string) (error){
 
     db := api.pogdb
     err := db.Upd(userNam, []byte(valStr))
     if err != nil {return fmt.Errorf("dbUpd: %v", err)}
-
     return nil
 }
 
+func (api *userDbApi) UpdUser(userNam string, valdata []byte) (error){
 
-func (api *userDbApi) AddUser(userNam, token string) (error){
+    db := api.pogdb
+    err := db.Upd(userNam, valdata)
+    if err != nil {return fmt.Errorf("dbUpd: %v", err)}
+    return nil
+}
+
+func (api *userDbApi) UpdUserInfo(userNam string, userInfo *UserData) (error){
+
+    db := api.pogdb
+	valdata, err := json.Marshal(*userInfo)
+	if err != nil {return fmt.Errorf("Marshal: %v", err)}
+    err = db.Upd(userNam, valdata)
+    if err != nil {return fmt.Errorf("dbUpd: %v", err)}
+    return nil
+}
+
+func (api *userDbApi) AddUserStr(userNam, token string) (error){
 
     db := api.pogdb
     err := db.Add(userNam, []byte(token))
+    if err != nil {return fmt.Errorf("dbAdd: %v", err)}
+    return nil
+}
+
+func (api *userDbApi) AddUser(userNam string, token []byte) (error){
+
+    db := api.pogdb
+    err := db.Add(userNam, token)
+    if err != nil {return fmt.Errorf("dbAdd: %v", err)}
+    return nil
+}
+
+func (api *userDbApi) AddUserData(userNam string, userInfo UserData) (error){
+
+    db := api.pogdb
+	token, err := json.Marshal(userInfo)
+	if err != nil {return fmt.Errorf("Marshal: %v", err)}
+    err = db.Add(userNam, []byte(token))
     if err != nil {return fmt.Errorf("dbAdd: %v", err)}
     return nil
 }
@@ -165,28 +269,64 @@ func (api *userDbApi) RmUser(userNam string) (error){
     return nil
 }
 
-func (api *userDbApi) DbClose() (error){
+func (api *userDbApi) CloseDb() (error){
     db := api.pogdb
     err := db.Close()
     if err != nil {return fmt.Errorf("dbClose: %v", err)}
     return nil
 }
 
+//        err := api.ClearDb()
+func (api *userDbApi) ClearDb() (error){
 
-func (api *userDbApi) PrintUserList() (error) {
+	err := os.RemoveAll(api.dbFilnam)
+	return err
+}
+
+func (api *userDbApi) Decode(inp string) (userInfo *UserData, err error){
+
+	res := strings.Split(inp, ",")
+	if len(res) != 3 {return nil, fmt.Errorf("insufficient strings!")}
+	userInfo = &UserData{res[0], res[1], res[2]}
+	return userInfo, nil
+}
+
+func (api *userDbApi) PrintDb(limit int, raw bool) (error) {
 
     db := api.pogdb
     Usernum, err := db.DbCount()
     if err != nil {return fmt.Errorf("DbCount: %v\n", err)}
+
+	if limit > -1 && limit < Usernum {Usernum = limit}
 
     count:=0
     for i:=0; i<Usernum; i++  {
         User, val, end, err := db.NextItem()
         if err != nil {return fmt.Errorf("NextItem: %v\n", err)}
         if end {break}
-        fmt.Printf(" --%d: %s %s\n", i, User, string(val))
+        if raw {
+			fmt.Printf(" --%d: %s %s\n", i, User, string(val))
+		} else {
+			userInfo:= &UserData{}
+			err =json.Unmarshal(val, &userInfo)
+			if err != nil {return fmt.Errorf("--%d %s PrintDb Unmarshal: %v", i, User, err)}
+			fmt.Printf(" --%d: %s\n", i, User)
+			fmt.Printf("         short: %s\n", userInfo.short)
+			fmt.Printf("         role:  %s\n", userInfo.role)
+			fmt.Printf("         token: %s\n", userInfo.token)
+		}
         count++
     }
     fmt.Printf("*** end user list ***\n")
+	return nil
+}
+
+func (api *userDbApi) PrintUserInfo(userInfo *UserData) (error) {
+
+	fmt.Println("***** UserInfo *****")
+	fmt.Printf("  short: %s\n", userInfo.short)
+	fmt.Printf("  role:  %s\n", userInfo.role)
+	fmt.Printf("  token: %s\n", userInfo.token)
+	fmt.Println("*** End UserInfo ***")
 	return nil
 }
