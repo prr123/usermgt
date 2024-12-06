@@ -81,7 +81,7 @@ func main() {
 	api, err := userLib.InitUserDbApi(dbFilnam)
 	if err != nil {log.Fatalf("error -- InitApi: %v\n", err)}
 	api.Dbg = dbg
-	defer api.DbClose()
+	defer api.CloseDb()
 
 	err = api.ProcCmd(cmdStr, userStr, valStr)
 	if err != nil {log.Fatalf("error -- ProcCmd: %v\n", err)}
