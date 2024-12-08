@@ -14,9 +14,9 @@ const charset = "abcdefghijklmnopqrstuvwxyz" +
 //type provMap map[string]string
 
 type UserData struct {
-	short string `json:"short,omitempty"`
-	role string `json:"role,omitempty"`
-	token string `json:"token,omitempty"`
+	Short string `json:"short,omitempty"`
+	Role string `json:"role,omitempty"`
+	Token string `json:"token,omitempty"`
 }
 
 type userDbApi struct {
@@ -41,7 +41,7 @@ func DecodefromJson(jsonData []byte)(dat UserData, err error) {
 
 
 func VerifyCmd(cmdStr string) (bool) {
-    cmdList := []string{"list", "get", "getUser", "add", "addUser", "upd", "updUser", "rm"}
+    cmdList := []string{"list", "get", "getUserInfo", "add", "addUser", "upd", "updUser", "rm", "clear","printDbraw" }
     for i:=0; i< len(cmdList); i++ {
         if cmdStr == cmdList[i] {
             return true
@@ -91,11 +91,11 @@ func (api *userDbApi) ProcCmd(cmdStr, userNam, valStr string) (error) {
         if dbg {fmt.Printf("dbg -- User: %s val: %s\n", userNam, valStr)}
         return nil
 
-    case "getUser":
+    case "getUserInfo":
         if dbg {fmt.Printf("dbg -- Cmd: getUser; User: %s\n", userNam)}
-        valStr, err := api.GetUserStr(userNam)
-        if err != nil {return fmt.Errorf("GetUserStr: %v", err)}
-        if dbg {fmt.Printf("dbg -- User: %s val: %s\n", userNam, valStr)}
+        userInfo, err := api.GetUserInfo(userNam)
+        if err != nil {return fmt.Errorf("GetUserInfo: %v", err)}
+        if dbg {fmt.Printf("dbg -- User: %s Info: %v\n", userNam,userInfo )}
         return nil
 
     case "add":
@@ -108,7 +108,7 @@ func (api *userDbApi) ProcCmd(cmdStr, userNam, valStr string) (error) {
         if dbg {fmt.Printf("dbg -- Cmd: addUser; User: %s, val: %s\n", userNam, valStr)}
 		userInfo, err := api.Decode(valStr)
         if err != nil {return fmt.Errorf("AddUser Decode: %v", err)}
-        err = api.AddUserData(userNam, *userInfo)
+        err = api.AddUserInfo(userNam, *userInfo)
         if err != nil {return fmt.Errorf("AddUser: %v", err)}
         return nil
 
@@ -198,15 +198,16 @@ func (api *userDbApi) GetUserData(userNam string) ([]byte, error){
     return token, nil
 }
 
-func (api *userDbApi) GetUserInfo(userNam string) (userInfo *UserData,err error){
+func (api *userDbApi) GetUserInfo(userNam string) (uInfo *UserData,err error){
+
+	var userInfo UserData
     db := api.pogdb
     token, err := db.Read(userNam)
     if err != nil {return nil, fmt.Errorf("GetToken: %v", err)}
-
-	err = json.Unmarshal(token, userInfo)
+	err = json.Unmarshal(token, &userInfo)
 	if err != nil {return nil, fmt.Errorf("Unmarshal: %v", err)}
 
-    return userInfo, nil
+    return &userInfo, nil
 }
 
 func (api *userDbApi) UpdUserStr(userNam, valStr string) (error){
@@ -251,12 +252,14 @@ func (api *userDbApi) AddUser(userNam string, token []byte) (error){
     return nil
 }
 
-func (api *userDbApi) AddUserData(userNam string, userInfo UserData) (error){
+func (api *userDbApi) AddUserInfo(userNam string, UserInfo UserData) (error){
 
+//fmt.Printf("dbg -- userInfo: %v, short: %s\n", UserInfo, UserInfo.Short)
     db := api.pogdb
-	token, err := json.Marshal(userInfo)
+	token, err := json.Marshal(UserInfo)
 	if err != nil {return fmt.Errorf("Marshal: %v", err)}
-    err = db.Add(userNam, []byte(token))
+//fmt.Printf("dbg -- token: %s\n", token)
+    err = db.Add(userNam, token)
     if err != nil {return fmt.Errorf("dbAdd: %v", err)}
     return nil
 }
@@ -311,9 +314,9 @@ func (api *userDbApi) PrintDb(limit int, raw bool) (error) {
 			err =json.Unmarshal(val, &userInfo)
 			if err != nil {return fmt.Errorf("--%d %s PrintDb Unmarshal: %v", i, User, err)}
 			fmt.Printf(" --%d: %s\n", i, User)
-			fmt.Printf("         short: %s\n", userInfo.short)
-			fmt.Printf("         role:  %s\n", userInfo.role)
-			fmt.Printf("         token: %s\n", userInfo.token)
+			fmt.Printf("         short: %s\n", userInfo.Short)
+			fmt.Printf("         role:  %s\n", userInfo.Role)
+			fmt.Printf("         token: %s\n", userInfo.Token)
 		}
         count++
     }
@@ -324,9 +327,9 @@ func (api *userDbApi) PrintDb(limit int, raw bool) (error) {
 func (api *userDbApi) PrintUserInfo(userInfo *UserData) (error) {
 
 	fmt.Println("***** UserInfo *****")
-	fmt.Printf("  short: %s\n", userInfo.short)
-	fmt.Printf("  role:  %s\n", userInfo.role)
-	fmt.Printf("  token: %s\n", userInfo.token)
+	fmt.Printf("  short: %s\n", userInfo.Short)
+	fmt.Printf("  role:  %s\n", userInfo.Role)
+	fmt.Printf("  token: %s\n", userInfo.Token)
 	fmt.Println("*** End UserInfo ***")
 	return nil
 }
